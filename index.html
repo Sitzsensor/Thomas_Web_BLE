@@ -1,0 +1,84 @@
+<html>
+  <head>
+   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+   <script type="text/javascript">
+      google.charts.load('current', {'packages':['gauge']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      let AcX = 0, AcY = 0;  
+
+
+function connect_BLE() {  
+
+const serviceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
+const characteristic1Uuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
+const characteristic2Uuid = "19b10002-e8f2-537e-4f6c-d104768a1214";
+
+  // Request access to the Bluetooth device
+navigator.bluetooth.requestDevice({
+  filters: [{ services: [serviceUuid] }]
+})
+.then(device => {
+  // Connect to the Bluetooth device
+  return device.gatt.connect();
+})
+.then(server => {
+  // Get the service
+  return server.getPrimaryService(serviceUuid);
+})
+.then(service => {
+  // Get the characteristic
+  return service.getCharacteristic(characteristic1Uuid);
+})
+.then(characteristic => {
+  // Subscribe to notifications
+  characteristic.startNotifications();
+  characteristic.addEventListener('characteristicvaluechanged', event => {
+    // Handle the updated value
+    let value = event.target.value;
+    let stringValue = new TextDecoder().decode(value);
+    let acceleration = stringValue.split('|');
+    console.log('Accelaration X value:', acceleration[0]);
+    console.log('Accelaration Y value:', acceleration[1]);
+    AcX = 50 + 50 * Number(acceleration[0]);
+    AcY = 50 + 50 * Number(acceleration[1]);
+  });
+})
+.catch(error => {
+  console.error('Error:', error);
+})
+};
+
+
+      function drawChart() {
+
+        var data = google.visualization.arrayToDataTable([
+          ['Label', 'Value'],
+          ['AcX', AcX],
+          ['AcY', AcY]
+        ]);
+
+        var options = {
+          width: 400, height: 120,
+          redFrom: 0, redTo: 30,
+          yellowFrom: 70, yellowTo: 100,
+          greenFrom: 30, greenTo: 150,
+          minorTicks: 10
+        };
+
+        var chart = new google.visualization.Gauge(document.getElementById('chart_div'));
+
+        chart.draw(data, options);
+
+        
+      }
+
+      setInterval(drawChart, 100);
+
+    </script>
+  </head>
+  <body>
+    <button onclick="connect_BLE()">Verbinden</button>
+    <div id="chart_div" style="width: 400px; height: 120px;"></div>
+  </body>
+</html>
